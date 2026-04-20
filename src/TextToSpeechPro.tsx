@@ -1,22 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Download, Volume2 } from 'lucide-react';
+import { Play, Pause, Download } from 'lucide-react';
 
 const TextToSpeechPro: React.FC = () => {
   const [text, setText] = useState<string>('');
   const [audioUrl, setAudioUrl] = useState<string | null>("/default.mp3");
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  
+
   // Fix 1: Properly type the refs
   // For DOM elements, use HTMLDivElement. For class instances, use the Class name.
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
 
+  const base64ToBlob = (base64: any, mime: any) => {
+    const byteChars = atob(base64);
+    const byteNumbers = new Array(byteChars.length);
+
+    for (let i = 0; i < byteChars.length; i++) {
+      byteNumbers[i] = byteChars.charCodeAt(i);
+    }
+
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mime });
+  };
+
+
   useEffect(() => {
     if (waveformRef.current) {
       wavesurfer.current = WaveSurfer.create({
         container: waveformRef.current,
-        waveColor: '#bbf7d0', 
+        waveColor: '#bbf7d0',
         progressColor: '#22c55e',
         cursorColor: '#16a34a',
         barWidth: 2,
@@ -47,38 +60,31 @@ const TextToSpeechPro: React.FC = () => {
 
 
   const handleSpeak = async () => {
-    // If text is empty, clear the previous results and stop
     if (!text.trim()) {
-        setAudioUrl("/default.mp3"); // This hides the Download button
-    if (wavesurfer.current) {
-      wavesurfer.current.PlayPause(); // empty(); // This clears the waveform visual
+      setAudioUrl("/default.mp3"); // This hides the Download button
+      if (wavesurfer.current) {
+        wavesurfer.current.playPause(); // empty(); // This clears the waveform visual
+      }
+      return;
     }
-    return;
-  }
 
-try {
-    // If you have a real API, you'd do this:
-    /*
-    const response = await fetch('YOUR_API_URL', {
-	method: 'POST',
-	headers: { 'Content-Type': 'application/json' },
-	body: JSON.stringify({ text }) }
-    );
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    setAudioUrl(url);
-    */
+    try {
+      const response = await fetch(
+        'http://localhost:8000/model/mms/?text=' + text, {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      }
+      );
+      const result = await response.json();
+      const audioBlob = base64ToBlob(result.output, 'audio/wav');
+      const url = URL.createObjectURL(audioBlob);
+      setAudioUrl(url);
 
-	    setAudioUrl("/output.mp3");
-
-	//Still trigger the browser's native voice so the user "hears" their specific text
-    //const utterance = new SpeechSynthesisUtterance(text);
-    //window.speechSynthesis.speak(utterance);
-    
-  } catch (error) {
-    console.error("TTS Failed, falling back to default file", error);
-    setAudioUrl("/default.mp3");
-  }  };
+    } catch (error) {
+      console.error("TTS Failed, falling back to default file", error);
+      setAudioUrl("/default.mp3");
+    }
+  };
 
   const togglePlay = () => {
     if (wavesurfer.current) {
@@ -90,7 +96,7 @@ try {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl shadow-green-100/50 border border-green-50 p-8">
-        
+
         <div className="flex items-center gap-3 mb-6">
           <h1 className="text-2xl font-bold text-gray-800">EchoTTS</h1>
         </div>
@@ -113,13 +119,13 @@ try {
           <div className="flex gap-2">
             {audioUrl && (
               <>
-                <button 
+                <button
                   onClick={togglePlay}
                   className="p-3 bg-white border border-gray-200 rounded-full hover:bg-green-50 text-green-600 transition-colors"
                 >
                   {isPlaying ? <Pause size={20} /> : <Play size={20} />}
                 </button>
-                
+
                 <a
                   href={audioUrl || "/default.mp3"}
                   download="speech.mp3"
