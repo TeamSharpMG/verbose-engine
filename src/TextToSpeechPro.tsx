@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Download } from 'lucide-react';
+import { Play, Pause, Download, Mic, AudioLinesIcon } from 'lucide-react';
+import './TextToSpeechPro.css';
 
 const TextToSpeechPro: React.FC = () => {
   const [text, setText] = useState<string>('');
@@ -93,62 +94,82 @@ const TextToSpeechPro: React.FC = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl shadow-green-100/50 border border-green-50 p-8">
+    const dotColor = isPlaying ? '#4a8c5c' : audioUrl ? '#a0bca2' : '#c8d8c8';
 
-        <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">EchoTTS</h1>
+   return (
+    <div className="root">
+ 
+      {/* TOP BAR */}
+      <div className="topbar hpad">
+        <div className="brand-row">
+          <div className="icon-wrap">
+            <Mic size={24} color="#e8f5e8" strokeWidth={1.5} />
+          </div>
+          <span className="brand-name">
+            TTS-<span className="brand-accent">MG</span>
+          </span>
         </div>
-
+        <div className="status-pill">
+          <span className="status-dot" style={{ backgroundColor: dotColor }} />
+          <span className="status-label" style={{ color: dotColor }}>
+            {isPlaying ? 'Playing' : audioUrl ? 'Ready' : 'Idle'}
+          </span>
+        </div>
+      </div>
+ 
+      {/* INPUT ZONE */}
+      <div className="input-zone hpad">
+        <div className="input-header">
+          <span className="section-label">Input text</span>
+          <span className="char-count">{text.length} chars</span>
+        </div>
         <textarea
-          className="w-full h-40 p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-100 focus:border-green-400 outline-none transition-all resize-none text-gray-700"
+          className="textarea"
           placeholder="Enter your text here..."
           value={text}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value)}
+          onChange={e => setText(e.target.value)}
         />
-
-        <div className="mt-6 flex flex-wrap gap-4 items-center justify-between">
-          <button
-            onClick={handleSpeak}
-            className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-green-200"
-          >
-            Generate Speech
-          </button>
-
-          <div className="flex gap-2">
-            {audioUrl && (
-              <>
-                <button
-                  onClick={togglePlay}
-                  className="p-3 bg-white border border-gray-200 rounded-full hover:bg-green-50 text-green-600 transition-colors"
-                >
-                  {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-                </button>
-
-                <a
-                  href={audioUrl || "/default.mp3"}
-                  download="speech.mp3"
-                  className="flex items-center gap-2 px-5 py-3 bg-white border border-green-200 text-green-700 rounded-xl hover:bg-green-50 transition-colors"
-                >
-                  <Download size={18} />
-                  <span>Download</span>
-                </a>
-              </>
-            )}
+      </div>
+ 
+      {/* CONTROLS BAR */}
+      <div className="controls-bar hpad">
+        <button className="flex gap-2 items-center btn-gen" onClick={handleSpeak}>
+          <AudioLinesIcon/> Generate
+        </button>
+        {audioUrl && (
+          <div className="play-group">
+            <button className="btn-play" onClick={togglePlay}>
+              {isPlaying
+                ? <Pause fill='white' size={16} strokeWidth={1.5} />
+                : <Play fill='white' size={16} strokeWidth={1.5} />
+              }
+            </button>
+            <a className="btn-export" href={audioUrl} download="speech.wav">
+              <Download size={12} strokeWidth={1.5} />
+              Export .wav
+            </a>
           </div>
-        </div>
-
-        <div className={`mt-8 p-4 bg-green-50/30 rounded-xl border border-dashed border-green-200 ${!audioUrl && 'opacity-30'}`}>
-          <div ref={waveformRef} />
+        )}
+      </div>
+ 
+      {/* WAVE ZONE */}
+      <div className="wave-zone hpad">
+        <span className="wave-label">Waveform</span>
+        <div className="wave-box" style={{ opacity: audioUrl ? 1 : 0.5 }}>
+          <div ref={waveformRef} className="wave-div" />
           {!audioUrl && (
-            <p className="text-center text-sm text-green-600/60 font-medium py-4">
-              Waveform will appear after generation
-            </p>
+            <span className="wave-empty-text">Generate to see waveform</span>
           )}
         </div>
-
       </div>
+ 
+      {/* FOOTER */}
+      <div className="footer hpad">
+        <span className="footer-text">
+          tts_mg_v1.0 - TeamSharpMG - 2026
+        </span>
+      </div>
+ 
     </div>
   );
 };
