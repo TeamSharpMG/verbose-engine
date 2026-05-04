@@ -1,91 +1,104 @@
 import React, { useState, useRef, useEffect } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Download } from 'lucide-react';
+import { Play, Pause, Download, Mic, AudioLinesIcon, ChevronDown } from 'lucide-react';
+import './TextToSpeechPro.css';
+
+const MODELS = [
+  { value: 'mms',        label: 'MMS Malagasy'   },
+  { value: 'mms_v2',     label: 'MMS v2'          },
+  { value: 'tacotron',   label: 'Tacotron-MG'     },
+];
 
 const TextToSpeechPro: React.FC = () => {
-  const [text, setText] = useState<string>('');
-  const [audioUrl, setAudioUrl] = useState<string | null>("/default.mp3");
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [text, setText]               = useState<string>('');
+  const [audioUrl, setAudioUrl]       = useState<string | null>('');
+  const [isPlaying, setIsPlaying]     = useState<boolean>(false);
+  const [selectedModel, setSelectedModel] = useState<string>('mms');
+  const [isGenerating, setIsGenerating]   = useState<boolean>(false);
 
-  // Fix 1: Properly type the refs
-  // For DOM elements, use HTMLDivElement. For class instances, use the Class name.
   const waveformRef = useRef<HTMLDivElement>(null);
-  const wavesurfer = useRef<WaveSurfer | null>(null);
+  const wavesurfer  = useRef<WaveSurfer | null>(null);
 
+  /* ── helpers ── */
   const base64ToBlob = (base64: any, mime: any) => {
-    const byteChars = atob(base64);
+    const byteChars   = atob(base64);
     const byteNumbers = new Array(byteChars.length);
-
     for (let i = 0; i < byteChars.length; i++) {
       byteNumbers[i] = byteChars.charCodeAt(i);
     }
-
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: mime });
+    return new Blob([new Uint8Array(byteNumbers)], { type: mime });
   };
 
-
+  /* ── WaveSurfer init (re-runs when audioUrl changes) ── */
   useEffect(() => {
     if (waveformRef.current) {
       wavesurfer.current = WaveSurfer.create({
-        container: waveformRef.current,
-        waveColor: '#bbf7d0',
-        progressColor: '#22c55e',
-        cursorColor: '#16a34a',
-        barWidth: 2,
-        barRadius: 3,
-        height: 80,
+        container:     waveformRef.current,
+        waveColor:     'rgba(57, 255, 122, 0.35)',
+        progressColor: '#39ff7a',
+        cursorColor:   '#ff6b2b',
+        barWidth:      2,
+        barRadius:     3,
+        barGap:        1,
+        height:        58,
       });
 
       wavesurfer.current.on('finish', () => setIsPlaying(false));
 
-      return () => {
-        wavesurfer.current?.destroy();
-      };
+      return () => { wavesurfer.current?.destroy(); };
     }
   }, [audioUrl]);
 
-
+  /* ── load audio into WaveSurfer ── */
   useEffect(() => {
     if (audioUrl && wavesurfer.current) {
       wavesurfer.current.load(audioUrl);
-      // Clean up memory when the URL changes or component unmounts
       return () => {
-        if (audioUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(audioUrl);
-        }
+        if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
       };
     }
   }, [audioUrl]);
 
+  // come back generate button when edit text
+  useEffect(() => {
+    if (audioUrl) {
+      wavesurfer.current?.destroy();
+      wavesurfer.current = null;
+      setAudioUrl('');
+      setIsPlaying(false);
+    }
+  }, [text]);
 
+  /* ── generate TTS ── */
   const handleSpeak = async () => {
     if (!text.trim()) {
-      setAudioUrl("/default.mp3"); // This hides the Download button
+      setAudioUrl('/default.mp3');
       if (wavesurfer.current) {
-        wavesurfer.current.playPause(); // empty(); // This clears the waveform visual
+        wavesurfer.current.playPause();
+        setIsPlaying(!isPlaying);
       }
       return;
     }
 
+    setIsGenerating(true);
     try {
       const response = await fetch(
-        'http://localhost:8000/model/mms/?text=' + text, {
-        headers: { 'Content-Type': 'application/json' },
-        method: 'POST',
-      }
+        // `http://localhost:8000/model/${selectedModel}/?text=` + text,
+        `http://localhost:8000/model/?text=` + text,
+        { headers: { 'Content-Type': 'application/json' }, method: 'POST' }
       );
-      const result = await response.json();
+      const result   = await response.json();
       const audioBlob = base64ToBlob(result.output, 'audio/wav');
-      const url = URL.createObjectURL(audioBlob);
-      setAudioUrl(url);
-
+      setAudioUrl(URL.createObjectURL(audioBlob));
     } catch (error) {
-      console.error("TTS Failed, falling back to default file", error);
-      setAudioUrl("/default.mp3");
+      console.error('TTS Failed, falling back to default file', error);
+      setAudioUrl('/default.mp3');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
+  /* ── play / pause ── */
   const togglePlay = () => {
     if (wavesurfer.current) {
       wavesurfer.current.playPause();
@@ -93,62 +106,184 @@ const TextToSpeechPro: React.FC = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl shadow-green-100/50 border border-green-50 p-8">
+  /* ── reset to new generation ── */
+  const handleReset = () => {
+    wavesurfer.current?.destroy();
+    wavesurfer.current = null;
+    setText('')
+    setAudioUrl('');
+    setIsPlaying(false);
+  };
 
-        <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">EchoTTS</h1>
+  /* ── status dot colour ── */
+  const dotColor = isPlaying ? '#39ff7a' : audioUrl ? '#ff6b2b' : '#283a2c';
+
+  /* ════════════════════════════════════════ */
+  return (
+    <div className="root">
+
+      {/* ── HERO ── */}
+      <section className="hero">
+        <div className="hero-bg">
+          <div className="hero-blob blob-1" />
+          <div className="hero-blob blob-2" />
+          <div className="hero-blob blob-3" />
         </div>
 
-        <textarea
-          className="w-full h-40 p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-100 focus:border-green-400 outline-none transition-all resize-none text-gray-700"
-          placeholder="Enter your text here..."
-          value={text}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value)}
-        />
+        <div className="hero-content hpad">
+          <div className="flex items-center mb-10! gap-4">
+            <img src="assets/img/icon.png" width={60} alt="" />
+            <div className="hero-badge mb-0!">
+              <span className="badge-dot" />
+              Malagasy TTS Engine
+            </div>
+          </div>
 
-        <div className="mt-6 flex flex-wrap gap-4 items-center justify-between">
-          <button
-            onClick={handleSpeak}
-            className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-green-200"
-          >
-            Generate Speech
-          </button>
+          <h1 className="hero-title">
+            <span className="hero-title-line">Text-To-Speech</span>
+            <span className="hero-title-accent">Malagasy</span>
+          </h1>
 
-          <div className="flex gap-2">
-            {audioUrl && (
-              <>
-                <button
-                  onClick={togglePlay}
-                  className="p-3 bg-white border border-gray-200 rounded-full hover:bg-green-50 text-green-600 transition-colors"
-                >
-                  {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-                </button>
+          <p className="hero-sub">
+            Manorata, ka omeo feo ny hevitrao, ary omeo aina ny hafatrao. <br />
+            Ampiasao ny teknolojia TTS-MG hanovana ny lahatsoratra malagasy ho feo madio sy mazava ary manintona.
+            {/* Convert Malagasy text to natural, expressive speech in seconds. */}
+          </p>
 
-                <a
-                  href={audioUrl || "/default.mp3"}
-                  download="speech.mp3"
-                  className="flex items-center gap-2 px-5 py-3 bg-white border border-green-200 text-green-700 rounded-xl hover:bg-green-50 transition-colors"
-                >
-                  <Download size={18} />
-                  <span>Download</span>
-                </a>
-              </>
-            )}
+          <div className="hero-stats">
+            
+            <div>
+              <img src="assets/img/logo_ispm.png" alt="" className='ispm-logo' width={100} />
+            </div>
+            <div className="stat-divider" />
+            <span className="stat-val">Institut Supérieur Polytechnique de Madagascar</span>
+          </div>
+          
+        </div>
+      </section>
+
+      {/* ── MAIN TTS ZONE ── */}
+      <main className="main-zone hpad">
+
+        {/* brand bar */}
+        <div className="topbar">
+          <div className="brand-row">
+            {/* <div className="icon-wrap">
+              <Mic size={17} color="#050d08" strokeWidth={2.2} />
+            </div> */}
+            <img src="assets/img/icon.png" width={40} alt="" />
+
+            <span className="brand-name">
+              TTS-<span className="brand-accent">MG</span>
+            </span>
+          </div>
+
+          <div className="status-pill">
+            <span className="status-dot" style={{ backgroundColor: dotColor, boxShadow: isPlaying ? `0 0 7px ${dotColor}` : 'none' }} />
+            <span className="status-label">
+              {isPlaying ? 'Playing' : audioUrl ? 'Ready' : 'Idle'}
+            </span>
           </div>
         </div>
 
-        <div className={`mt-8 p-4 bg-green-50/30 rounded-xl border border-dashed border-green-200 ${!audioUrl && 'opacity-30'}`}>
-          <div ref={waveformRef} />
-          {!audioUrl && (
-            <p className="text-center text-sm text-green-600/60 font-medium py-4">
-              Waveform will appear after generation
-            </p>
-          )}
+        {/* input zone */}
+        <div className="input-zone">
+          <div className="input-header">
+            <span className="section-label">Input text</span>
+
+            {/* model selector — top right of input */}
+            <div className="model-select-wrap">
+              <span className="section-label">Model</span>
+              <div className="model-select-box">
+                <select
+                  className="model-select"
+                  value={selectedModel}
+                  onChange={e => setSelectedModel(e.target.value)}
+                >
+                  {MODELS.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+                <ChevronDown size={11} className="select-arrow" />
+              </div>
+            </div>
+          </div>
+
+          <div className="textarea-wrap">
+            <textarea
+              className="textarea"
+              placeholder="Manorata ary mihainoa teny malagasy..."
+              value={text}
+              onChange={e => setText(e.target.value)}
+            />
+            <span className="char-badge">{text.length}</span>
+          </div>
         </div>
 
-      </div>
+        {/* ── Generate button OR inline player ── */}
+        {!audioUrl ? (
+          <div className="action-zone">
+            <button
+              className={`btn-gen-full${isGenerating ? ' loading' : ''}`}
+              onClick={handleSpeak}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <><span className="spinner" /> Generating…</>
+              ) : (
+                <><AudioLinesIcon size={16} /> Generate Speech</>
+              )}
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* play/pause — waveform — download, all inline */}
+            <div className="player-zone">
+              <button className="btn-play" onClick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+                {isPlaying
+                  ? <Pause fill="currentColor" size={16} strokeWidth={0} />
+                  : <Play  fill="currentColor" size={16} strokeWidth={0} />
+                }
+              </button>
+
+              {/* wavesurfer mounts here — no bg / no border from CSS */}
+              <div ref={waveformRef} className="wave-inline" />
+
+              <a className="btn-export" href={audioUrl} download="speech.wav" aria-label="Download WAV">
+                <Download size={13} strokeWidth={1.8} />
+                <span>WAV</span>
+              </a>
+            </div>
+
+            <div className="regen-zone">
+              <button className="btn-regen" onClick={handleReset}>
+                ↺ New generation
+              </button>
+            </div>
+          </>
+        )}
+      </main>
+
+      {/* ── FOOTER ── */}
+      <footer className="footer hpad">
+        <div className="footer-inner">
+          <div className="footer-brand">
+            {/* <div className="icon-wrap-sm"> */}
+              {/* <Mic size={12} color="#050d08" strokeWidth={2.2} /> */}
+            <img src="assets/img/icon.png" width={25} alt="" />
+
+            {/* </div> */}
+            TTS-MG
+          </div>
+
+          <span className="footer-copy">
+            © 2026 TeamSharpMG — All rights reserved
+          </span>
+
+          <span className="footer-version">v1.0.0</span>
+        </div>
+      </footer>
+
     </div>
   );
 };
