@@ -13,9 +13,9 @@ import ModeMenu, { Mode } from "./components/menu";
 import SpeachToText from "./SpeachToText";
 
 const MODELS = [
-  { value: "mms", label: "MMS Malagasy" },
-  { value: "mms_v2", label: "MMS v2" },
-  { value: "tacotron", label: "Tacotron-MG" },
+  { value: "mms", label: "Malagasy V1" },
+  //{ value: "mms_v2", label: "MMS v2" },
+  //{ value: "tacotron", label: "Tacotron-MG" },
 ];
 
 const TextToSpeechPro: React.FC = () => {
