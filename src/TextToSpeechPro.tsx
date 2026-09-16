@@ -9,6 +9,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 import "./TextToSpeechPro.css";
+import ModeMenu, { Mode } from "./components/menu";
+import SpeachToText from "./SpeachToText";
 
 const MODELS = [
   { value: "mms", label: "MMS Malagasy" },
@@ -128,9 +130,15 @@ const TextToSpeechPro: React.FC = () => {
   const dotColor = isPlaying ? "#39ff7a" : audioUrl ? "#ff6b2b" : "#283a2c";
 
   /* ════════════════════════════════════════ */
+  // ------- Menu ---------
+  const [mode, setMode] = useState<Mode>("tts");
+
   return (
     <div className="root">
       {/* ── HERO ── */}
+      <section className="head">
+        
+      </section>
       <section className="hero">
         <div className="hero-bg">
           <div className="hero-blob blob-1" />
@@ -139,22 +147,26 @@ const TextToSpeechPro: React.FC = () => {
         </div>
 
         <div className="hero-content hpad">
-          <div className="flex items-center mb-10! gap-4">
-            <img src="assets/img/icon.png" width={60} alt="" />
-            <div className="hero-badge mb-0!">
-              <span className="badge-dot" />
-              Malagasy TTS Engine
+          {/* <div className="flex justify-between"> */}
+            <div className="flex items-center mb-10! gap-4">
+              <img src="assets/img/icon.png" width={60} alt="" />
+              {/* <div className="hero-badge mb-0!">
+                <span className="badge-dot" />
+                Malagasy TTS Engine
+              </div> */}
+              <ModeMenu mode={mode} onChange={setMode} />
             </div>
-          </div>
+
+          {/* </div> */}
 
           <h1 className="hero-title">
-            <span className="hero-title-line">Text-To-Speech</span>
+            <span className="hero-title-line">{mode === "tts" ? "Text-To-Speech" : "Speech-To-Text"}</span>
             <span className="hero-title-accent">Malagasy</span>
           </h1>
 
           <p className="hero-sub">
             Manorata, ka omeo feo ny hevitrao, ary omeo aina ny hafatrao. <br />
-            Ampiasao ny teknolojia TTS-MG hanovana ny lahatsoratra malagasy ho
+            Ampiasao ny teknolojia STT sy TTS-MG hanovana ny lahatsoratra malagasy ho
             feo madio sy mazava ary manintona.
             {/* Convert Malagasy text to natural, expressive speech in seconds. */}
           </p>
@@ -177,127 +189,132 @@ const TextToSpeechPro: React.FC = () => {
       </section>
 
       {/* ── MAIN TTS ZONE ── */}
-      <main className="main-zone hpad">
-        {/* brand bar */}
-        <div className="topbar">
-          <div className="brand-row">
-            {/* <div className="icon-wrap">
-              <Mic size={17} color="#050d08" strokeWidth={2.2} />
-            </div> */}
-            <img src="assets/img/icon.png" width={40} alt="" />
+      {mode === "tts" ? (
+        <main className="main-zone hpad">
+            {/* brand bar */}
+            <div className="topbar">
+              <div className="brand-row">
+                {/* <div className="icon-wrap">
+                <Mic size={17} color="#050d08" strokeWidth={2.2} />
+              </div> */}
+              <img src="assets/img/icon.png" width={40} alt="" />
 
-            <span className="brand-name">
-              TTS-<span className="brand-accent">MG</span>
-            </span>
+              <span className="brand-name">
+                TTS-<span className="brand-accent">MG</span>
+              </span>
+            </div>
+
+            <div className="status-pill">
+              <span
+                className="status-dot"
+                style={{
+                  backgroundColor: dotColor,
+                  boxShadow: isPlaying ? `0 0 7px ${dotColor}` : "none",
+                }}
+              />
+              <span className="status-label">
+                {isPlaying ? "Playing" : audioUrl ? "Ready" : "Idle"}
+              </span>
+            </div>
           </div>
 
-          <div className="status-pill">
-            <span
-              className="status-dot"
-              style={{
-                backgroundColor: dotColor,
-                boxShadow: isPlaying ? `0 0 7px ${dotColor}` : "none",
-              }}
-            />
-            <span className="status-label">
-              {isPlaying ? "Playing" : audioUrl ? "Ready" : "Idle"}
-            </span>
-          </div>
-        </div>
+          {/* input zone */}
+          <div className="input-zone">
+            <div className="input-header">
+              <span className="section-label">Input text</span>
 
-        {/* input zone */}
-        <div className="input-zone">
-          <div className="input-header">
-            <span className="section-label">Input text</span>
-
-            {/* model selector — top right of input */}
-            <div className="model-select-wrap">
-              <span className="section-label">Model</span>
-              <div className="model-select-box">
-                <select
-                  className="model-select"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                >
-                  {MODELS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={11} className="select-arrow" />
+              {/* model selector — top right of input */}
+              <div className="model-select-wrap">
+                <span className="section-label">Model</span>
+                <div className="model-select-box">
+                  <select
+                    className="model-select"
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                  >
+                    {MODELS.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={11} className="select-arrow" />
+                </div>
               </div>
             </div>
+
+            <div className="textarea-wrap">
+              <textarea
+                className="textarea"
+                placeholder="Manorata ary mihainoa teny malagasy..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+              <span className="char-badge">{text.length}</span>
+            </div>
           </div>
 
-          <div className="textarea-wrap">
-            <textarea
-              className="textarea"
-              placeholder="Manorata ary mihainoa teny malagasy..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-            <span className="char-badge">{text.length}</span>
-          </div>
-        </div>
-
-        {/* ── Generate button OR inline player ── */}
-        {!audioUrl ? (
-          <div className="action-zone">
-            <button
-              className={`btn-gen-full${isGenerating ? " loading" : ""}`}
-              onClick={handleSpeak}
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <span className="spinner" /> Generating…
-                </>
-              ) : (
-                <>
-                  <AudioLinesIcon size={16} /> Generate Speech
-                </>
-              )}
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* play/pause — waveform — download, all inline */}
-            <div className="player-zone">
+          {/* ── Generate button OR inline player ── */}
+          {!audioUrl ? (
+            <div className="action-zone">
               <button
-                className="btn-play"
-                onClick={togglePlay}
-                aria-label={isPlaying ? "Pause" : "Play"}
+                className={`btn-gen-full${isGenerating ? " loading" : ""}`}
+                onClick={handleSpeak}
+                disabled={isGenerating}
               >
-                {isPlaying ? (
-                  <Pause fill="currentColor" size={16} strokeWidth={0} />
+                {isGenerating ? (
+                  <>
+                    <span className="spinner" /> Generating…
+                  </>
                 ) : (
-                  <Play fill="currentColor" size={16} strokeWidth={0} />
+                  <>
+                    <AudioLinesIcon size={16} /> Generate Speech
+                  </>
                 )}
               </button>
-
-              {/* wavesurfer mounts here — no bg / no border from CSS */}
-              <div ref={waveformRef} className="wave-inline" />
-
-              <a
-                className="btn-export"
-                href={audioUrl}
-                download="speech.wav"
-                aria-label="Download WAV"
-              >
-                <Download size={13} strokeWidth={1.8} />
-                <span>WAV</span>
-              </a>
             </div>
+          ) : (
+            <>
+              {/* play/pause — waveform — download, all inline */}
+              <div className="player-zone">
+                <button
+                  className="btn-play"
+                  onClick={togglePlay}
+                  aria-label={isPlaying ? "Pause" : "Play"}
+                >
+                  {isPlaying ? (
+                    <Pause fill="currentColor" size={16} strokeWidth={0} />
+                  ) : (
+                    <Play fill="currentColor" size={16} strokeWidth={0} />
+                  )}
+                </button>
 
-            <div className="regen-zone">
-              <button className="btn-regen" onClick={handleReset}>
-                ↺ New generation
-              </button>
-            </div>
-          </>
-        )}
-      </main>
+                {/* wavesurfer mounts here — no bg / no border from CSS */}
+                <div ref={waveformRef} className="wave-inline" />
+
+                <a
+                  className="btn-export"
+                  href={audioUrl}
+                  download="speech.wav"
+                  aria-label="Download WAV"
+                >
+                  <Download size={13} strokeWidth={1.8} />
+                  <span>WAV</span>
+                </a>
+              </div>
+
+              <div className="regen-zone">
+                <button className="btn-regen" onClick={handleReset}>
+                  ↺ New generation
+                </button>
+              </div>
+            </>
+          )}
+        </main>)
+      : 
+        <SpeachToText />
+      
+      }
 
       {/* ── FOOTER ── */}
       <footer className="footer hpad">
@@ -314,7 +331,7 @@ const TextToSpeechPro: React.FC = () => {
             © 2026 TeamSharpMG — All rights reserved
           </span>
 
-          <span className="footer-version">v1.0.0</span>
+          <span className="footer-version">v2.0.0</span>
         </div>
       </footer>
     </div>
