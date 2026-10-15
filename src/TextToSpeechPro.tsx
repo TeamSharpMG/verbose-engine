@@ -4,7 +4,7 @@ import {
   Play,
   Pause,
   Download,
-  Mic,
+  // Mic,
   AudioLinesIcon,
   ChevronDown,
 } from "lucide-react";
